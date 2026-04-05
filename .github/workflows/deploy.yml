@@ -25,7 +25,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           # Note: Replace this with your actual Workload Identity Provider ID
-          workload_identity_provider: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/my-repo'
+          workload_identity_provider: 'projects/111047255377/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'casita-deployer@casita-family-prod.iam.gserviceaccount.com'
 
       - name: Deploy to Cloud Run

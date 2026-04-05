@@ -4,6 +4,7 @@ import { X, Trash2, Loader2 } from "lucide-react";
 import { base44 } from "@/lib/base44Client";
 import { format, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUI } from "@/context/UIContext";
 
 const DEFAULT_EVENT_TYPES = ["Karate", "School of Rock, Band", "School of Rock, Piano", "Playdate", "Birthday Party", "Mathnasium", "Doctor Appointment"];
 
@@ -16,6 +17,12 @@ const DURATIONS = [
 ];
 
 export function NewEventModal({ isOpen, onClose, onSave, onDelete, event, members, selectedDate }: any) {
+  const { setIsModalOpen } = useUI();
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
+
   const [eventType, setEventType] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [time, setTime] = useState("15:00");
@@ -112,7 +119,7 @@ export function NewEventModal({ isOpen, onClose, onSave, onDelete, event, member
         color: firstMember?.color || "#ccc",
         notes,
         repeat_weekly: repeatWeekly,
-        series_id: event?.series_id || (repeatWeekly ? crypto.randomUUID() : null)
+        series_id: repeatWeekly ? (event?.series_id || crypto.randomUUID()) : null
       });
     } catch (error) {
       console.error("Failed to save event:", error);

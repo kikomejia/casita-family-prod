@@ -4,6 +4,7 @@ import { X, Upload, RefreshCw, Save } from "lucide-react";
 import { createAvatar } from "@dicebear/core";
 import { avataaars } from "@dicebear/collection";
 import { cn } from "../lib/utils";
+import { useUI } from "@/context/UIContext";
 
 const SKIN_COLORS = ['614335', 'd08b5b', 'ae5d29', 'edb98a', 'ffdbb4', 'fd9841', 'f8d25c'];
 const HAIR_COLORS = ['a55728', '2c1b18', 'b58143', 'd6b370', '724133', '4a312c', 'f59797', 'ecdcbf', 'c93305', 'e8e1e1'];
@@ -31,6 +32,12 @@ const BACKGROUNDS = ["b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf"];
 
 
 export function AvatarBuilderModal({ isOpen, onClose, onSave, onUploadClick, initialName, initialRole, initialConfig }: any) {
+  const { setIsModalOpen } = useUI();
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
+
   const [isKid, setIsKid] = useState(initialRole === 'kid');
   const [skinColor, setSkinColor] = useState(SKIN_COLORS[2]);
   const [hairColor, setHairColor] = useState(HAIR_COLORS[0]);

@@ -2,8 +2,14 @@
 import { useState, useEffect } from "react";
 import { X, Delete } from "lucide-react";
 import { base44 } from "@/lib/base44Client";
+import { useUI } from "@/context/UIContext";
 
 export function PinModal({ isOpen, onClose, onSuccess }: any) {
+  const { setIsModalOpen } = useUI();
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [savedPin, setSavedPin] = useState("1234");

@@ -41,7 +41,10 @@ export function CalendarTab() {
 
   const handleSave = async (eventData: any) => {
     if (editingEvent) {
-      await base44.entities.CalendarEvent.update(editingEvent.id, eventData);
+      const updatedEvent = await base44.entities.CalendarEvent.update(editingEvent.id, eventData);
+      if (updatedEvent) {
+        setEvents(prev => prev.map(e => e.id === editingEvent.id ? { ...e, ...eventData } : e));
+      }
       
       // If it's an edit and they just turned on repeat_weekly for a non-series event
       if (eventData.repeat_weekly && !editingEvent.series_id && eventData.series_id) {
@@ -55,7 +58,19 @@ export function CalendarTab() {
           });
         }
         if (eventsToCreate.length > 0) {
-          await base44.entities.CalendarEvent.createMany(eventsToCreate);
+          const createdEvents = await base44.entities.CalendarEvent.createMany(eventsToCreate);
+          if (createdEvents) {
+            setEvents(prev => [...prev, ...createdEvents]);
+          }
+        }
+      }
+      
+      // If they turned off repeat_weekly, delete all other events in the series
+      if (!eventData.repeat_weekly && editingEvent.repeat_weekly && editingEvent.series_id) {
+        const seriesEvents = events.filter(e => e.series_id === editingEvent.series_id && e.id !== editingEvent.id);
+        if (seriesEvents.length > 0) {
+          await base44.entities.CalendarEvent.deleteMany(seriesEvents.map(e => e.id));
+          setEvents(prev => prev.filter(e => e.series_id !== editingEvent.series_id || e.id === editingEvent.id));
         }
       }
     } else {
@@ -71,10 +86,16 @@ export function CalendarTab() {
           });
         }
         if (eventsToCreate.length > 0) {
-          await base44.entities.CalendarEvent.createMany(eventsToCreate);
+          const createdEvents = await base44.entities.CalendarEvent.createMany(eventsToCreate);
+          if (createdEvents) {
+            setEvents(prev => [...prev, ...createdEvents]);
+          }
         }
       } else {
-        await base44.entities.CalendarEvent.create(eventData);
+        const createdEvent = await base44.entities.CalendarEvent.create(eventData);
+        if (createdEvent) {
+          setEvents(prev => [...prev, createdEvent]);
+        }
       }
     }
     setShowModal(false);
@@ -87,9 +108,11 @@ export function CalendarTab() {
       const seriesEvents = events.filter(e => e.series_id === event.series_id);
       if (seriesEvents.length > 0) {
         await base44.entities.CalendarEvent.deleteMany(seriesEvents.map(e => e.id));
+        setEvents(prev => prev.filter(e => e.series_id !== event.series_id));
       }
     } else {
       await base44.entities.CalendarEvent.delete(id);
+      setEvents(prev => prev.filter(e => e.id !== id));
     }
     setShowModal(false);
     setShowDeleteConfirm(false);
