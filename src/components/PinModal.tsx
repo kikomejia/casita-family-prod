@@ -55,7 +55,7 @@ export function PinModal({ isOpen, onClose, onSuccess }: any) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      <div className="flex justify-end p-4">
+      <div className="flex justify-end px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800">
           <X className="w-8 h-8" />
         </button>

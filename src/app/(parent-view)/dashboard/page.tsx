@@ -231,7 +231,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen pb-20">
-      <div className="bg-white px-4 py-4 border-b border-gray-100 flex items-center sticky top-0 z-10">
+      <div className="bg-white px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-gray-100 flex items-center sticky top-0 z-10">
         <button onClick={() => router.back()} className="p-2 -ml-2 mr-2 text-gray-500 hover:text-gray-800">
           <ArrowLeft className="w-6 h-6" />
         </button>

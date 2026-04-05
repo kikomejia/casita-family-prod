@@ -19,7 +19,7 @@ export default function KidViewLayout({
       <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] bg-pink-200/50 rounded-full blur-3xl pointer-events-none" />
 
       <header className={cn(
-        "px-6 pt-10 pb-4 flex justify-between items-center relative z-20 transition-all duration-300",
+        "px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-4 flex justify-between items-center relative z-20 transition-all duration-300",
         isModalOpen ? "opacity-0 pointer-events-none -translate-y-10" : "opacity-100"
       )}>
         <h1 className="text-4xl font-black text-indigo-600 tracking-tighter shrink-0 drop-shadow-sm flex items-center space-x-2">
