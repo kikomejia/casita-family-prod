@@ -1,0 +1,22 @@
+{
+  "name": "Casita",
+  "short_name": "Casita",
+  "description": "Family Chore Tracker",
+  "start_url": "/chores",
+  "display": "standalone",
+  "background_color": "#ff007f",
+  "theme_color": "#ff007f",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

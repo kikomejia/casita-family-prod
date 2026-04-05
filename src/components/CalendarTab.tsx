@@ -146,7 +146,7 @@ export function CalendarTab() {
     <div className="p-4 space-y-6 pb-24">
       <button 
         onClick={openNewModal}
-        className="fixed bottom-28 right-6 w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-2xl hover:bg-primary/90 transition-all active:scale-95 z-30"
+        className="fixed bottom-28 right-6 w-14 h-14 bg-[#ff00ff] text-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,0,255,0.4)] hover:bg-[#ff00ff]/90 transition-all active:scale-95 z-30"
       >
         <Plus className="w-8 h-8" />
       </button>
@@ -164,7 +164,7 @@ export function CalendarTab() {
           </button>
         </div>
 
-        <div className="flex justify-between px-1">
+        <div className="grid grid-cols-7 gap-1">
           {weekDays.map(day => {
             const isSelected = isSameDay(day, selectedDay);
             const isToday = isSameDay(day, new Date());
@@ -175,21 +175,21 @@ export function CalendarTab() {
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDay(day)}
-                className={`flex flex-col items-center p-2 py-5 rounded-[24px] min-w-[52px] transition-all ${
+                className={`flex flex-col items-center p-1 py-4 rounded-[20px] transition-all ${
                   isSelected 
-                    ? 'bg-[#ff00ff] text-white shadow-[0_10px_25px_-5px_rgba(255,0,255,0.4)]' 
+                    ? 'bg-[#ff00ff] text-white shadow-[0_8px_20px_-4px_rgba(255,0,255,0.4)] scale-105' 
                     : 'text-gray-900 hover:bg-gray-100'
                 }`}
               >
-                <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
-                  {format(day, "EEE")}
+                <span className={`text-[9px] font-black uppercase tracking-widest ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
+                  {format(day, "EEE").charAt(0)}
                 </span>
-                <span className={`text-2xl font-black mt-2 mb-2 ${isToday && !isSelected ? 'text-[#ff00ff]' : ''}`}>
+                <span className={`text-lg font-black mt-1 mb-1 ${isToday && !isSelected ? 'text-[#ff00ff]' : ''}`}>
                   {format(day, "d")}
                 </span>
-                <div className="flex space-x-1.5 h-2 items-center justify-center">
+                <div className="flex space-x-0.5 h-1.5 items-center justify-center">
                   {Array.from({ length: dotCount }).map((_, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-[#00ff00]" />
+                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#00ff00]'}`} />
                   ))}
                 </div>
               </button>

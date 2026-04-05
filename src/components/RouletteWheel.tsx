@@ -43,8 +43,8 @@ export function RouletteWheel({ prizes, onSpinDone }: { prizes: string[], onSpin
       ctx.save();
       ctx.rotate(i * sliceAngle + sliceAngle / 2);
       ctx.textAlign = 'right';
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 12px sans-serif';
       ctx.fillText(prizes[i], radius - 15, 5);
       ctx.restore();
     }
@@ -117,7 +117,11 @@ export function RouletteWheel({ prizes, onSpinDone }: { prizes: string[], onSpin
       <button 
         onClick={spin} 
         disabled={isSpinning}
-        className="mt-6 px-8 py-3 bg-primary text-white font-black text-lg rounded-full shadow-lg disabled:opacity-50 transition-transform active:scale-95"
+        className={`mt-6 px-10 py-4 font-black text-xl uppercase tracking-widest rounded-full shadow-2xl transition-all active:scale-95 ${
+          isSpinning 
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            : 'bg-[#ff00ff] text-white shadow-[0_0_20px_rgba(255,0,255,0.5)] hover:shadow-[0_0_30px_rgba(255,0,255,0.7)] hover:scale-105'
+        }`}
       >
         {isSpinning ? 'SPINNING...' : 'SPIN THE WHEEL!'}
       </button>

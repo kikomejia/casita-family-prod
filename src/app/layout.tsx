@@ -5,6 +5,16 @@ import { AuthProvider } from "@/components/AuthProvider";
 export const metadata: Metadata = {
   title: "Casita",
   description: "Family Chore and Tracker app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Casita",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

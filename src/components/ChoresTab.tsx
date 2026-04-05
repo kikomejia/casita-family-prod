@@ -12,7 +12,7 @@ const LUNA_DEFAULT_CHORES = ["Comeu Tudo", "Brush Teeth", "Clean Up", "Arrumou a
 
 export function ChoresTab() {
   const [localMembers, setLocalMembers] = useState<any[]>([]);
-  const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [choreLogs, setChoreLogs] = useState<any[]>([]);
   const [adding, setAdding] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -31,9 +31,14 @@ export function ChoresTab() {
         return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
       });
       setLocalMembers(sorted);
-      if (sorted.length > 0 && !selectedMember) {
-        setSelectedMember(sorted[0]);
-      }
+      
+      // Initialize or validate selected ID
+      setSelectedMemberId(prevId => {
+        if (!prevId && sorted.length > 0) return sorted[0].id;
+        // If the member no longer exists in the new list, fall back to the first one
+        if (prevId && !sorted.some(sm => sm.id === prevId)) return sorted[0]?.id || null;
+        return prevId;
+      });
     });
 
     const unsubSettings = base44.entities.Settings.subscribeOne("family", (s) => {
@@ -52,15 +57,17 @@ export function ChoresTab() {
   }, []);
 
   const addPoint = async (task: string) => {
-    if (!selectedMember || adding) return;
+    if (!selectedMemberId || adding) return;
+    const currentMember = localMembers.find(m => m.id === selectedMemberId);
+    if (!currentMember) return;
+    
     setAdding(true);
 
     // Optimistic UI
-    const newPoints = (selectedMember.points || 0) + 1;
-    const newLifetimePoints = (selectedMember.lifetime_points || 0) + 1;
+    const newPoints = (currentMember.points || 0) + 1;
+    const newLifetimePoints = (currentMember.lifetime_points || 0) + 1;
     
-    const updatedMember = { ...selectedMember, points: newPoints, lifetime_points: newLifetimePoints };
-    setSelectedMember(updatedMember);
+    const updatedMember = { ...currentMember, points: newPoints, lifetime_points: newLifetimePoints };
     setLocalMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
     
     const tempLog = { id: 'temp-' + Date.now(), assignee: updatedMember.id, title: task, points: 1, is_completed: true, completed_at: new Date().toISOString() };
@@ -102,21 +109,23 @@ export function ChoresTab() {
     return member.color || neonColors[index % neonColors.length];
   };
 
+  const selectedMember = localMembers.find(m => m.id === selectedMemberId);
+
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6 pb-24 overflow-y-auto max-h-screen">
       <ConfettiOverlay show={showConfetti} onComplete={() => setShowConfetti(false)} />
       
       <div>
         <h1 className="text-2xl font-black text-gray-900 mb-4">Who did a chore?</h1>
-        <div className="flex space-x-3 overflow-x-auto pt-2 pb-2">
+        <div className="flex space-x-3 overflow-x-auto pt-2 pb-2 scrollbar-hide">
           {localMembers.map((member, index) => {
-            const isSelected = selectedMember?.id === member.id;
+            const isSelected = selectedMemberId === member.id;
             const memberColor = getMemberColor(member, index);
             
             return (
               <button
                 key={member.id}
-                onClick={() => setSelectedMember(member)}
+                onClick={() => setSelectedMemberId(member.id)}
                 className={cn(
                   "flex flex-col items-center p-3 rounded-2xl min-w-[80px] transition-all border",
                   isSelected 
@@ -211,7 +220,7 @@ export function ChoresTab() {
                 <button 
                   type="submit"
                   disabled={!customChoreName.trim() || adding}
-                  className="p-2 bg-primary text-white rounded-xl disabled:opacity-50"
+                  className="p-3 bg-[#ff00ff] text-white rounded-2xl shadow-[0_0_15px_rgba(255,0,255,0.4)] disabled:opacity-50 transition-all active:scale-90"
                 >
                   <Check className="w-5 h-5" />
                 </button>

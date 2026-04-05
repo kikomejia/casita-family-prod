@@ -183,7 +183,7 @@ export function AvatarBuilderModal({ isOpen, onClose, onSave, onUploadClick, ini
                   <button 
                     key={color}
                     onClick={() => setSkinColor(color)}
-                    className={`w-8 h-8 rounded-full border-2 ${skinColor === color ? 'border-primary scale-110' : 'border-transparent'}`}
+                    className={`w-8 h-8 rounded-full border-2 ${skinColor === color ? 'border-[#ff00ff] scale-110 shadow-[0_0_8px_rgba(255,0,255,0.3)]' : 'border-transparent'}`}
                     style={{ backgroundColor: `#${color}` }}
                   />
                 ))}
@@ -197,7 +197,7 @@ export function AvatarBuilderModal({ isOpen, onClose, onSave, onUploadClick, ini
                   <button 
                     key={color}
                     onClick={() => setHairColor(color)}
-                    className={`w-8 h-8 rounded-full border-2 ${hairColor === color ? 'border-primary scale-110' : 'border-transparent'}`}
+                    className={`w-8 h-8 rounded-full border-2 ${hairColor === color ? 'border-[#ff00ff] scale-110 shadow-[0_0_8px_rgba(255,0,255,0.3)]' : 'border-transparent'}`}
                     style={{ backgroundColor: `#${color}` }}
                   />
                 ))}
@@ -239,12 +239,12 @@ export function AvatarBuilderModal({ isOpen, onClose, onSave, onUploadClick, ini
           </div>
         </div>
 
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50">
           <button 
             onClick={handleSave}
-            className="w-full p-3 bg-primary text-white font-black rounded-xl shadow-md hover:bg-primary/90 transition-colors flex items-center justify-center"
+            className="w-full p-4 bg-[#ff00ff] text-white font-black text-lg uppercase tracking-widest rounded-2xl shadow-[0_0_20px_rgba(255,0,255,0.4)] hover:shadow-[0_0_30px_rgba(255,0,255,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center animate-pulse"
           >
-            <Save className="w-5 h-5 mr-2" /> Save Avatar
+            <Save className="w-5 h-5 mr-3" /> Save Changes
           </button>
         </div>
       </div>

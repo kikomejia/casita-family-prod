@@ -282,7 +282,7 @@ export function NewEventModal({ isOpen, onClose, onSave, onDelete, event, member
               </motion.div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex space-x-3">
+            <div className="p-6 border-t border-gray-100 flex space-x-3 pb-safe-offset-4">
               {event && (
                 <motion.button 
                   whileTap={{ scale: 0.9 }}
@@ -297,7 +297,7 @@ export function NewEventModal({ isOpen, onClose, onSave, onDelete, event, member
                 whileTap={{ scale: 0.98 }}
                 onClick={handleSave}
                 disabled={isSaving || isDeleting}
-                className="flex-1 p-4 bg-primary text-white font-black text-lg rounded-2xl shadow-md hover:bg-primary/90 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                className="flex-1 p-4 bg-[#ff00ff] text-white font-black text-lg rounded-2xl shadow-[0_8px_20px_-4px_rgba(255,0,255,0.4)] hover:shadow-[0_12px_25px_-5px_rgba(255,0,255,0.5)] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isSaving ? (
                   <>
@@ -305,7 +305,7 @@ export function NewEventModal({ isOpen, onClose, onSave, onDelete, event, member
                     Saving...
                   </>
                 ) : (
-                  "Save Event"
+                  event ? "Save Event" : "Create Event"
                 )}
               </motion.button>
             </div>

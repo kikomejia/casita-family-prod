@@ -98,7 +98,11 @@ export function RewardsTab() {
                   <button
                     onClick={() => setSpinningMember(member)}
                     disabled={!canSpin}
-                    className="px-4 py-2 bg-primary text-white font-bold text-sm rounded-full disabled:opacity-50 disabled:bg-gray-200 disabled:text-gray-500 transition-all active:scale-95"
+                    className={`px-5 py-2 font-black text-xs uppercase tracking-widest rounded-full transition-all active:scale-95 ${
+                      canSpin 
+                        ? 'bg-[#ff00ff] text-white shadow-[0_0_15px_rgba(255,0,255,0.4)] hover:shadow-[0_0_25px_rgba(255,0,255,0.6)] animate-pulse' 
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                    }`}
                   >
                     Spin
                   </button>
