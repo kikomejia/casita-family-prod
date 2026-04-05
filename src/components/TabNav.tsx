@@ -7,11 +7,13 @@ import { Calendar, CheckSquare, Gift, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PinModal } from "./PinModal";
 import { motion } from "framer-motion";
+import { useUI } from "@/context/UIContext";
 
 export function TabNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [showPin, setShowPin] = useState(false);
+  const { isModalOpen } = useUI();
 
   const tabs = [
     { name: "Calendar", path: "/calendar", icon: Calendar },
@@ -21,7 +23,10 @@ export function TabNav() {
 
   return (
     <>
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-md z-40 px-2">
+      <div className={cn(
+        "fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-md z-40 px-2 transition-all duration-300 transform",
+        isModalOpen ? "translate-y-24 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+      )}>
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

@@ -38,10 +38,7 @@ export default function KidViewLayout({
         {children}
       </main>
 
-      <div className={cn(
-        "fixed bottom-0 left-0 right-0 z-40 transition-all duration-300 transform",
-        isModalOpen ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-      )}>
+      <div className="fixed bottom-0 left-0 right-0 z-40">
         <TabNav />
       </div>
     </div>
