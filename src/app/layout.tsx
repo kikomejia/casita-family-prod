@@ -4,7 +4,10 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { UIProvider } from "@/context/UIContext";
 
 export const viewport: Viewport = {
-  themeColor: "#f8fafc", // matches bg-slate-50
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#f8fafc" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
