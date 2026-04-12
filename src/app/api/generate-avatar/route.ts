@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     const description = visionData.candidates[0].content.parts[0].text;
 
-    // Step 2: Use Imagen 4.0 to generate the avatar based on the description and the selected style
+    // Step 2: Use Nano Banana Pro Preview to generate the avatar
     let stylePrompt = "A beautiful stylized 3D avatar";
     if (style === "disney") stylePrompt = "A magical Disney-style 2D animated character avatar, fairytale aesthetics, expressive eyes";
     if (style === "pixar") stylePrompt = "A high-quality 3D Pixar-style character avatar, dramatic lighting, soft vibrant shading";
@@ -66,30 +66,37 @@ export async function POST(request: Request) {
 
     const finalPrompt = `${stylePrompt}. Description of the person: ${description}. Clear face, front-facing portrait, isolated on a solid color background.`;
 
-    const imagenResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+    const imageGenResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/nano-banana-pro-preview:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        instances: [{ prompt: finalPrompt }],
-        parameters: {
-          sampleCount: 1,
-          outputOptions: { mimeType: "image/jpeg" }
-        }
+        contents: [{ parts: [{ text: finalPrompt }] }]
       })
     });
 
-    const imagenData = await imagenResponse.json();
+    const imageData = await imageGenResponse.json();
     
-    if (imagenData.error) {
-      throw new Error(`Imagen API Error: ${imagenData.error.message}`);
+    if (imageData.error) {
+      throw new Error(`Nano Banana API Error: ${imageData.error.message}`);
     }
 
-    if (!imagenData.predictions || imagenData.predictions.length === 0) {
-      throw new Error("Failed to generate image with Imagen 3.");
+    const parts = imageData.candidates?.[0]?.content?.parts || [];
+    let generatedBase64 = "";
+    let mimeType = "image/jpeg";
+    
+    for (const part of parts) {
+      if (part.inlineData && part.inlineData.data) {
+        generatedBase64 = part.inlineData.data;
+        if (part.inlineData.mimeType) mimeType = part.inlineData.mimeType;
+        break;
+      }
     }
 
-    const generatedBase64 = imagenData.predictions[0].bytesBase64Encoded;
-    const dataUrl = `data:image/jpeg;base64,${generatedBase64}`;
+    if (!generatedBase64) {
+      throw new Error("Failed to generate image with Nano Banana.");
+    }
+
+    const dataUrl = `data:${mimeType};base64,${generatedBase64}`;
 
     return NextResponse.json({ avatarUrl: dataUrl });
 
