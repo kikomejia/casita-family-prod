@@ -2,7 +2,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { base44 } from "@/lib/base44Client";
 import { ConfettiOverlay } from "./ConfettiOverlay";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
 
@@ -83,6 +83,41 @@ export function ChoresTab() {
           const goals = await base44.entities.FamilyGoal.filter({ is_active: true });
           if (goals.length > 0) {
             await base44.entities.FamilyGoal.update(goals[0].id, { current_points: (goals[0].current_points || 0) + 1 });
+            window.dispatchEvent(new Event('casita_refresh_goal'));
+          }
+        })()
+      ]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const subtractPoint = async () => {
+    if (!selectedMemberId || adding) return;
+    const currentMember = localMembers.find(m => m.id === selectedMemberId);
+    if (!currentMember) return;
+
+    setAdding(true);
+
+    const newPoints = Math.max(0, (currentMember.points || 0) - 1);
+
+    const updatedMember = { ...currentMember, points: newPoints };
+    setLocalMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+
+    const tempLog = { id: 'temp-' + Date.now(), assignee: updatedMember.id, title: '😈 Naughty', points: -1, is_completed: true, completed_at: new Date().toISOString() };
+    setChoreLogs(prev => [tempLog, ...prev].slice(0, 10));
+
+    try {
+      await Promise.all([
+        base44.entities.FamilyMember.update(updatedMember.id, { points: newPoints }),
+        base44.entities.Chore.create({ assignee: updatedMember.id, title: '😈 Naughty', points: -1, is_completed: true, completed_at: new Date().toISOString() }),
+        (async () => {
+          const goals = await base44.entities.FamilyGoal.filter({ is_active: true });
+          if (goals.length > 0) {
+            const goalPoints = Math.max(0, (goals[0].current_points || 0) - 1);
+            await base44.entities.FamilyGoal.update(goals[0].id, { current_points: goalPoints });
             window.dispatchEvent(new Event('casita_refresh_goal'));
           }
         })()
@@ -238,6 +273,22 @@ export function ChoresTab() {
               </button>
             )}
           </div>
+
+          {/* Naughty button — only for children */}
+          {selectedMember.role === 'child' && (
+            <div className="mt-4">
+              <button
+                onClick={subtractPoint}
+                disabled={adding || (selectedMember.points || 0) <= 0}
+                className="w-full flex items-center justify-center space-x-2 p-4 bg-red-50 border-2 border-red-200 rounded-2xl shadow-sm transition-all active:scale-95 disabled:opacity-40 hover:bg-red-100 hover:border-red-300"
+              >
+                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500 shrink-0">
+                  <Minus className="w-5 h-5" />
+                </div>
+                <span className="font-black text-red-500 text-sm uppercase tracking-wider">😈 Naughty (-1 pt)</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -269,7 +320,7 @@ export function ChoresTab() {
                       </div>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-green-500">+{log.points}</span>
+                  <span className={`text-sm font-black ${log.points < 0 ? 'text-red-500' : 'text-green-500'}`}>{log.points < 0 ? log.points : `+${log.points}`}</span>
                 </div>
               );
             })}
