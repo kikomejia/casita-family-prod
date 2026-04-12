@@ -44,6 +44,8 @@ interface Goal {
   current_points: number;
   reward: string;
   is_active?: boolean;
+  created_date?: string;
+  updated_date?: string;
 }
 
 function ListEditor({ title, items, onSave }: { title: string, items: string[], onSave: (items: string[]) => void }) {
@@ -519,7 +521,7 @@ export default function Dashboard() {
           setIsAvatarModalOpen(false);
           setUploadingMemberId(null);
         }}
-        onSave={async (dataUrl, config) => {
+        onSave={async (dataUrl: string, config: { style: string; aiGenerated: boolean }) => {
           await handleSaveAvatar(dataUrl, config);
           setIsAvatarModalOpen(false);
           setUploadingMemberId(null);
