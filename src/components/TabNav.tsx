@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Calendar, CheckSquare, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -9,7 +9,6 @@ import { useUI } from "@/context/UIContext";
 
 export function TabNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const { isModalOpen } = useUI();
 
   const tabs = [

@@ -4,7 +4,13 @@ import { X, Delete } from "lucide-react";
 import { base44 } from "@/lib/base44Client";
 import { useUI } from "@/context/UIContext";
 
-export function PinModal({ isOpen, onClose, onSuccess }: any) {
+interface PinModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export function PinModal({ isOpen, onClose, onSuccess }: PinModalProps) {
   const { setIsModalOpen } = useUI();
 
   useEffect(() => {
