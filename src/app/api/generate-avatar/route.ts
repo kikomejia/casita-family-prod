@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     // However, for simplicity in this implementation, we will use a direct prompt to Gemini 1.5 Pro
     // and wait for Google's native Imagen image-to-image API.
     
-    // Step 1: Use Gemini 1.5 Flash to describe the face
-    const visionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // Step 1: Use Gemini 3 Flash Preview to describe the face
+    const visionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     const description = visionData.candidates[0].content.parts[0].text;
 
-    // Step 2: Use Imagen 3 to generate the avatar based on the description and the selected style
+    // Step 2: Use Imagen 4.0 to generate the avatar based on the description and the selected style
     let stylePrompt = "A beautiful stylized 3D avatar";
     if (style === "disney") stylePrompt = "A magical Disney-style 2D animated character avatar, fairytale aesthetics, expressive eyes";
     if (style === "pixar") stylePrompt = "A high-quality 3D Pixar-style character avatar, dramatic lighting, soft vibrant shading";
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
     const finalPrompt = `${stylePrompt}. Description of the person: ${description}. Clear face, front-facing portrait, isolated on a solid color background.`;
 
-    const imagenResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
+    const imagenResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
