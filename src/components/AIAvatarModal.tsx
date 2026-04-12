@@ -8,7 +8,7 @@ import { compressImage } from "@/lib/imageUtils";
 interface AIAvatarModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerate: (dataUrl: string, config: any) => void;
+  onGenerate: (dataUrl: string, config: { style: string; aiGenerated: boolean }) => void;
   memberName: string;
 }
 
@@ -81,8 +81,9 @@ export function AIAvatarModal({ isOpen, onClose, onGenerate, memberName }: AIAva
       setGeneratedAvatar(data.avatarUrl);
       onGenerate(data.avatarUrl, { style: selectedStyle, aiGenerated: true });
       
-    } catch (err: any) {
-      setError(err.message || "An error occurred during generation.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred during generation.";
+      setError(message);
     } finally {
       setIsGenerating(false);
     }

@@ -25,6 +25,27 @@ const TABS = [
 const MAYA_DEFAULT_CHORES = ["Make up Bed", "Homework", "Comeu Tudo", "Arrumou a Mesa", "Favor", "Read 20 min"];
 const LUNA_DEFAULT_CHORES = ["Comeu Tudo", "Brush Teeth", "Clean Up", "Arrumou a Mesa", "Favor"];
 
+interface Member {
+  id: string;
+  name: string;
+  role: string;
+  points: number;
+  lifetime_points?: number;
+  avatar_url?: string;
+  avatar_config?: string;
+  chores?: string[];
+  color?: string;
+}
+
+interface Goal {
+  id?: string;
+  title: string;
+  target_points: number;
+  current_points: number;
+  reward: string;
+  is_active?: boolean;
+}
+
 function ListEditor({ title, items, onSave }: { title: string, items: string[], onSave: (items: string[]) => void }) {
   const [list, setList] = useState(items);
   const [newItem, setNewItem] = useState("");
@@ -81,8 +102,8 @@ function ListEditor({ title, items, onSave }: { title: string, items: string[], 
 
 export default function Dashboard() {
   const router = useRouter();
-  const [members, setMembers] = useState<any[]>([]);
-  const [goal, setGoal] = useState<any>({ title: "", target_points: 50, current_points: 0, reward: "" });
+  const [members, setMembers] = useState<Member[]>([]);
+  const [goal, setGoal] = useState<Goal>({ title: "", target_points: 50, current_points: 0, reward: "" });
   const [pin, setPin] = useState("1234");
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,7 +174,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  const updateSettings = async (updates: any) => {
+  const updateSettings = async (updates: Partial<{ pin: string; chores: string[]; prizes: string[]; event_types: string[] }>) => {
     if (settingsId) {
       await base44.entities.Settings.update(settingsId, updates);
     }
@@ -229,7 +250,7 @@ export default function Dashboard() {
     }, 100);
   };
 
-  const handleSaveAvatar = async (dataUrl: string, config: any) => {
+  const handleSaveAvatar = async (dataUrl: string, config: { style: string; aiGenerated: boolean }) => {
     if (!uploadingMemberId) return;
     try {
       const configStr = JSON.stringify(config);
@@ -353,7 +374,7 @@ export default function Dashboard() {
                        <button onClick={() => handleUploadClick(member.id)} className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg font-bold whitespace-nowrap">Upload</button>
                     </div>
                     {member.role === 'child' && (
-                      <div className="pl-13 pb-2">
+                      <div className="pl-12 pb-2">
                         <ListEditor 
                           title={`${member.name}'s Chores`} 
                           items={member.chores || (member.name === 'Maya' ? MAYA_DEFAULT_CHORES : member.name === 'Luna' ? LUNA_DEFAULT_CHORES : [])} 
