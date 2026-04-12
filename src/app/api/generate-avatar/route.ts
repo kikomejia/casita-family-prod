@@ -23,35 +23,7 @@ export async function POST(request: Request) {
     // Convert base64 data URL to raw base64 if needed
     const base64Data = image.split(",")[1] || image;
 
-    // To perform style transfer from an image using Gemini, we first need to extract facial features
-    // using Gemini 1.5 Pro/Flash, and then use those features to prompt Imagen 3.
-    // However, for simplicity in this implementation, we will use a direct prompt to Gemini 1.5 Pro
-    // and wait for Google's native Imagen image-to-image API.
-    
-    // Step 1: Use Gemini 3 Flash Preview to describe the face
-    const visionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: "Analyze this face in detail (gender, hair color, eye color, defining features, expression). Provide a short 2-sentence physical description." },
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-          ]
-        }]
-      })
-    });
-
-    const visionData = await visionResponse.json();
-    if (!visionData.candidates || visionData.candidates.length === 0) {
-      console.error("Gemini Vision API Error:", JSON.stringify(visionData, null, 2));
-      const errorMessage = visionData.error?.message || (visionData.promptFeedback?.blockReason ? `Blocked by safety filter: ${visionData.promptFeedback.blockReason}` : "Failed to analyze face with Gemini.");
-      throw new Error(`Gemini Error: ${errorMessage}`);
-    }
-
-    const description = visionData.candidates[0].content.parts[0].text;
-
-    // Step 2: Use Nano Banana Pro Preview to generate the avatar
+    // Build the style prompt based on selected style
     let stylePrompt = "A beautiful stylized 3D avatar";
     if (style === "disney") stylePrompt = "A magical Disney-style 2D animated character avatar, fairytale aesthetics, expressive eyes";
     if (style === "pixar") stylePrompt = "A high-quality 3D Pixar-style character avatar, dramatic lighting, soft vibrant shading";
@@ -64,25 +36,33 @@ export async function POST(request: Request) {
       }
     }
 
-    const finalPrompt = `${stylePrompt}. Description of the person: ${description}. Clear face, front-facing portrait, isolated on a solid color background.`;
+    const finalPrompt = `Transform this person's photo into ${stylePrompt}. Keep the likeness, face shape, hair color, eye color, and expression as close to the original as possible. Clear face, front-facing portrait, isolated on a solid color background.`;
 
-    const imageGenResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/nano-banana-pro-preview:generateContent?key=${apiKey}`, {
+    // Single-step: Send the selfie directly to Nano Banana 2 (gemini-3.1-flash-image-preview)
+    // so the model can SEE the actual face and produce a faithful style transfer.
+    const imageGenResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: finalPrompt }] }]
+        contents: [{
+          parts: [
+            { text: finalPrompt },
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+          ]
+        }]
       })
     });
 
     const imageData = await imageGenResponse.json();
     
     if (imageData.error) {
-      throw new Error(`Nano Banana API Error: ${imageData.error.message}`);
+      throw new Error(`Nano Banana 2 API Error: ${imageData.error.message}`);
     }
 
+    // Find the generated image in the response parts
     const parts = imageData.candidates?.[0]?.content?.parts || [];
     let generatedBase64 = "";
-    let mimeType = "image/jpeg";
+    let mimeType = "image/png";
     
     for (const part of parts) {
       if (part.inlineData && part.inlineData.data) {
@@ -93,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     if (!generatedBase64) {
-      throw new Error("Failed to generate image with Nano Banana.");
+      throw new Error("Failed to generate image with Nano Banana 2.");
     }
 
     const dataUrl = `data:${mimeType};base64,${generatedBase64}`;
