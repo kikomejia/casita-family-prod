@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
+      <body className="antialiased font-sans bg-slate-50 text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
         <UIProvider>
           <AuthProvider>
             {children}

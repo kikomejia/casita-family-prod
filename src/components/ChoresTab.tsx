@@ -112,7 +112,7 @@ export function ChoresTab() {
   const selectedMember = localMembers.find(m => m.id === selectedMemberId);
 
   return (
-    <div className="p-4 space-y-6 pb-24 overflow-y-auto max-h-screen">
+    <div className="p-4 space-y-6 pb-24">
       <ConfettiOverlay show={showConfetti} onComplete={() => setShowConfetti(false)} />
       
       <div>
