@@ -59,12 +59,8 @@ export function RewardsTab() {
           claimed_at: new Date().toISOString()
         });
 
-        // Bulk delete chore logs
-        const logsToDelete = await base44.entities.Chore.filter({ assignee: spinningMember.id }, "-completed_at", 100);
-        if (logsToDelete.length > 0) {
-          await base44.entities.Chore.deleteMany(logsToDelete.map(l => l.id));
-        }
-
+        // We no longer delete chore logs, as we want to keep the "Recent Chores" history.
+        
         setSpinningMember(null);
       } catch (e) {
         console.error(e);

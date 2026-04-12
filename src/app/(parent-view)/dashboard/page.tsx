@@ -3,14 +3,24 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { base44 } from "@/lib/base44Client";
-import { ArrowLeft, Plus, X, Save, Minus, Camera } from "lucide-react";
+import { ArrowLeft, Plus, X, Save, Minus, Camera, Users, Target, ListTodo, Calendar, Gift, Lock, Sparkles } from "lucide-react";
 import { compressImage } from "@/lib/imageUtils";
 import { AvatarBuilderModal } from "@/components/AvatarBuilderModal";
+import { AIAvatarModal } from "@/components/AIAvatarModal";
 import { auth } from "@/lib/firebase";
 
 const DEFAULT_CHORES = ["Make Bed", "Brush Teeth", "Clean Room", "Read 20 mins", "Help with Dinner"];
 const DEFAULT_PRIZES = ["Extra Screen Time", "Ice Cream", "Choose Movie", "Stay Up Late", "New Toy", "Pizza Night", "Skip a Chore", "Small Treat"];
 const DEFAULT_EVENT_TYPES = ["Karate", "Playdate", "Doctor", "School Event", "Family Outing", "Other"];
+
+const TABS = [
+  { id: "Profiles", label: "Profiles", icon: Users },
+  { id: "Family Goal", label: "Goals", icon: Target },
+  { id: "Chores", label: "Chores", icon: ListTodo },
+  { id: "Events", label: "Events", icon: Calendar },
+  { id: "Prizes", label: "Prizes", icon: Gift },
+  { id: "PIN", label: "Security", icon: Lock },
+];
 
 const MAYA_DEFAULT_CHORES = ["Make up Bed", "Homework", "Comeu Tudo", "Arrumou a Mesa", "Favor", "Read 20 min"];
 const LUNA_DEFAULT_CHORES = ["Comeu Tudo", "Brush Teeth", "Clean Up", "Arrumou a Mesa", "Favor"];
@@ -27,7 +37,6 @@ function ListEditor({ title, items, onSave }: { title: string, items: string[], 
     if (newItem.trim() && !list.includes(newItem.trim())) {
       const updated = [...list, newItem.trim()];
       setList(updated);
-      onSave(updated);
       setNewItem("");
     }
   };
@@ -35,7 +44,11 @@ function ListEditor({ title, items, onSave }: { title: string, items: string[], 
   const handleRemove = (item: string) => {
     const updated = list.filter(i => i !== item);
     setList(updated);
-    onSave(updated);
+  };
+
+  const handleSaveChanges = () => {
+    onSave(list);
+    alert("Changes saved!");
   };
 
   return (
@@ -49,7 +62,7 @@ function ListEditor({ title, items, onSave }: { title: string, items: string[], 
           </div>
         ))}
       </div>
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 mb-4">
         <input 
           value={newItem} 
           onChange={e => setNewItem(e.target.value)} 
@@ -59,6 +72,9 @@ function ListEditor({ title, items, onSave }: { title: string, items: string[], 
         />
         <button onClick={handleAdd} className="bg-primary text-white rounded-lg px-3 py-2"><Plus className="w-4 h-4" /></button>
       </div>
+      <button onClick={handleSaveChanges} className="w-full py-2 bg-primary text-white font-bold rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(255,0,127,0.3)]">
+        <Save className="w-4 h-4 mr-2" /> Save Changes
+      </button>
     </div>
   );
 }
@@ -78,35 +94,57 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(null);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [isAIAvatarModalOpen, setIsAIAvatarModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("Profiles");
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    let unsubMembers = () => {};
+    let unsubGoals = () => {};
+    let unsubSettings = () => {};
 
-    const unsubMembers = base44.entities.FamilyMember.subscribe((mems) => {
-      const order = ["Maya", "Luna", "Gabriela", "Francisco"];
-      const sorted = [...mems].sort((a, b) => {
-        const indexA = order.indexOf(a.name);
-        const indexB = order.indexOf(b.name);
-        return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+    const setupSubscriptions = () => {
+      if (!auth.currentUser) return;
+      
+      unsubMembers = base44.entities.FamilyMember.subscribe((mems) => {
+        const order = ["Maya", "Luna", "Gabriela", "Francisco"];
+        const sorted = [...mems].sort((a, b) => {
+          const indexA = order.indexOf(a.name);
+          const indexB = order.indexOf(b.name);
+          return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+        });
+        setMembers(sorted);
+        setLoading(false);
       });
-      setMembers(sorted);
-      setLoading(false);
-    });
 
-    const unsubGoals = base44.entities.FamilyGoal.subscribe((goals) => {
-      const active = goals.find(g => g.is_active);
-      if (active) setGoal(active);
-    });
+      unsubGoals = base44.entities.FamilyGoal.subscribe((goals) => {
+        const active = goals.find(g => g.is_active);
+        if (active) setGoal(active);
+      });
 
-    const unsubSettings = base44.entities.Settings.subscribeOne("family", (s) => {
-      if (s) {
-        setSettingsId(s.id);
-        setChores(s.chores || DEFAULT_CHORES);
-        setPrizes(s.prizes || DEFAULT_PRIZES);
-        setEventTypes(s.event_types || DEFAULT_EVENT_TYPES);
-        setPin(s.pin || "1234");
-      }
-    });
+      unsubSettings = base44.entities.Settings.subscribeOne("family", (s) => {
+        if (s) {
+          setSettingsId(s.id);
+          setChores(s.chores || DEFAULT_CHORES);
+          setPrizes(s.prizes || DEFAULT_PRIZES);
+          setEventTypes(s.event_types || DEFAULT_EVENT_TYPES);
+          setPin(s.pin || "1234");
+        }
+      });
+    };
+
+    if (auth.currentUser) {
+      setupSubscriptions();
+    } else {
+      const unsubAuth = auth.onAuthStateChanged((user) => {
+        if (user) setupSubscriptions();
+      });
+      return () => {
+        unsubAuth();
+        unsubMembers();
+        unsubGoals();
+        unsubSettings();
+      };
+    }
 
     return () => {
       unsubMembers();
@@ -183,7 +221,8 @@ export default function Dashboard() {
     setIsAvatarModalOpen(true);
   };
 
-  const handleUploadClick = () => {
+  const handleUploadClick = (memberId?: string) => {
+    if (memberId) setUploadingMemberId(memberId);
     setIsAvatarModalOpen(false);
     setTimeout(() => {
       fileInputRef.current?.click();
@@ -206,9 +245,6 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Failed to save avatar", error);
       alert("Failed to save avatar");
-    } finally {
-      setIsAvatarModalOpen(false);
-      setUploadingMemberId(null);
     }
   };
 
@@ -231,11 +267,31 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen pb-20">
-      <div className="bg-white px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-gray-100 flex items-center sticky top-0 z-10">
+      <div className="bg-white px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-gray-100 flex items-center sticky top-0 z-20">
         <button onClick={() => router.back()} className="p-2 -ml-2 mr-2 text-gray-500 hover:text-gray-800">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="text-xl font-black text-gray-900">Parent Dashboard</h1>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex space-x-2 overflow-x-auto nice-scrollbar sticky z-10" style={{ top: "calc(60px + env(safe-area-inset-top))" }}>
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl whitespace-nowrap font-bold text-sm transition-all flex-shrink-0 ${
+                isActive ? "bg-gray-900 text-white shadow-sm" : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
@@ -253,11 +309,12 @@ export default function Dashboard() {
               onChange={handleFileChange} 
             />
             {/* Family Members */}
+            {activeTab === "Profiles" && (
             <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Manage Points & Avatars</h2>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {members.map(member => (
-                  <div key={member.id} className="space-y-3">
+                  <div key={member.id} className="space-y-3 pb-3 border-b border-gray-50 last:border-0">
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                       <div className="flex items-center space-x-3">
                         <button 
@@ -289,6 +346,12 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
+                    {/* Extra Avatar Options */}
+                    <div className="flex space-x-2 pl-14 pt-1 overflow-x-auto nice-scrollbar">
+                       <button onClick={() => handleAvatarClick(member.id)} className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold whitespace-nowrap">Edit Style</button>
+                       <button onClick={() => { setUploadingMemberId(member.id); setIsAIAvatarModalOpen(true); }} className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold whitespace-nowrap flex items-center"><Sparkles className="w-3 h-3 mr-1" /> AI Magic</button>
+                       <button onClick={() => handleUploadClick(member.id)} className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg font-bold whitespace-nowrap">Upload</button>
+                    </div>
                     {member.role === 'child' && (
                       <div className="pl-13 pb-2">
                         <ListEditor 
@@ -302,8 +365,10 @@ export default function Dashboard() {
                 ))}
               </div>
             </section>
+            )}
 
             {/* Family Goal */}
+            {activeTab === "Family Goal" && (
             <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Active Family Goal</h2>
               <div className="space-y-3">
@@ -335,26 +400,42 @@ export default function Dashboard() {
                     />
                   </div>
                 </div>
-                <button onClick={handleGoalSave} className="w-full py-2 bg-primary text-white font-bold rounded-lg flex items-center justify-center">
+                <button onClick={handleGoalSave} className="w-full py-2 bg-primary text-white font-bold rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(255,0,127,0.3)] transition-all active:scale-95">
                   <Save className="w-4 h-4 mr-2" /> Save Goal
                 </button>
               </div>
             </section>
+            )}
 
-            {/* Lists */}
-            <ListEditor 
-              title="Roulette Prizes" 
-              items={prizes} 
-              onSave={(items) => { setPrizes(items); updateSettings({ prizes: items }); }} 
-            />
+            {/* Lists (Chores) */}
+            {activeTab === "Chores" && (
+              <ListEditor 
+                title="Global Default Chores" 
+                items={chores} 
+                onSave={(items) => { setChores(items); updateSettings({ chores: items }); }} 
+              />
+            )}
 
-            <ListEditor 
-              title="Event Types" 
-              items={eventTypes} 
-              onSave={(items) => { setEventTypes(items); updateSettings({ event_types: items }); }} 
-            />
+            {/* Lists (Prizes) */}
+            {activeTab === "Prizes" && (
+              <ListEditor 
+                title="Roulette Prizes" 
+                items={prizes} 
+                onSave={(items) => { setPrizes(items); updateSettings({ prizes: items }); }} 
+              />
+            )}
+
+            {/* Lists (Events) */}
+            {activeTab === "Events" && (
+              <ListEditor 
+                title="Event Types" 
+                items={eventTypes} 
+                onSave={(items) => { setEventTypes(items); updateSettings({ event_types: items }); }} 
+              />
+            )}
 
             {/* PIN Settings */}
+            {activeTab === "PIN" && (
             <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Security & Maintenance</h2>
               <div className="space-y-4">
@@ -370,7 +451,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className="flex items-end">
-                    <button onClick={handlePinSave} className="py-2 px-4 bg-gray-800 text-white font-bold rounded-lg">
+                    <button onClick={handlePinSave} className="py-2 px-4 bg-primary text-white font-bold rounded-lg shadow-[0_0_10px_rgba(255,0,127,0.3)] transition-all active:scale-95">
                       Update
                     </button>
                   </div>
@@ -405,6 +486,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </section>
+            )}
 
           </div>
         )}
@@ -416,11 +498,25 @@ export default function Dashboard() {
           setIsAvatarModalOpen(false);
           setUploadingMemberId(null);
         }}
-        onSave={handleSaveAvatar}
+        onSave={async (dataUrl, config) => {
+          await handleSaveAvatar(dataUrl, config);
+          setIsAvatarModalOpen(false);
+          setUploadingMemberId(null);
+        }}
         onUploadClick={handleUploadClick}
         initialName={members.find(m => m.id === uploadingMemberId)?.name}
         initialRole={members.find(m => m.id === uploadingMemberId)?.role}
         initialConfig={members.find(m => m.id === uploadingMemberId)?.avatar_config}
+      />
+
+      <AIAvatarModal
+        isOpen={isAIAvatarModalOpen}
+        onClose={() => {
+          setIsAIAvatarModalOpen(false);
+          setUploadingMemberId(null);
+        }}
+        onGenerate={handleSaveAvatar}
+        memberName={members.find(m => m.id === uploadingMemberId)?.name || ""}
       />
     </div>
   );
