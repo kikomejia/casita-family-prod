@@ -28,7 +28,7 @@ export default function KidViewLayout({
         "px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-4 flex justify-between items-center relative z-20 transition-all duration-300",
         isModalOpen ? "opacity-0 pointer-events-none -translate-y-10" : "opacity-100"
       )}>
-        <h1 className="text-4xl font-black text-primary tracking-tighter shrink-0 drop-shadow-[0_0_8px_rgba(255,0,127,0.3)] flex items-center space-x-2">
+        <h1 className="text-4xl font-black text-[#ff007f] tracking-tighter shrink-0 drop-shadow-[0_0_8px_rgba(255,0,127,0.8)] flex items-center space-x-2">
           <span>Casita</span>
         </h1>
         <button 
