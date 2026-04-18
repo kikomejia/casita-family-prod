@@ -1,78 +1,89 @@
 "use client";
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
 import { base44 } from "@/lib/base44Client";
 import { ConfettiOverlay } from "./ConfettiOverlay";
 import { Plus, Check, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
+import { useData } from "@/context/DataContext";
 
-const DEFAULT_CHORES = ["Make Bed", "Brush Teeth", "Clean Room", "Read 20 mins", "Help with Dinner"];
 const MAYA_DEFAULT_CHORES = ["Make up Bed", "Homework", "Comeu Tudo", "Arrumou a Mesa", "Favor", "Read 20 min"];
 const LUNA_DEFAULT_CHORES = ["Comeu Tudo", "Brush Teeth", "Clean Up", "Arrumou a Mesa", "Favor"];
+const NEON_COLORS = ["#ff00ff", "#00f2fe", "#00ff00", "#a855f7", "#ff6b00", "#ffff00"];
+
+function getMemberColor(member: any, index: number) {
+  return member.color || NEON_COLORS[index % NEON_COLORS.length];
+}
 
 export function ChoresTab() {
+  const { members: globalMembers, settings } = useData();
+
+  // Local copy of members so optimistic UI updates don't fight the global state
   const [localMembers, setLocalMembers] = useState<any[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [choreLogs, setChoreLogs] = useState<any[]>([]);
   const [adding, setAdding] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [chores, setChores] = useState<string[]>(DEFAULT_CHORES);
   const [isCustomInputOpen, setIsCustomInputOpen] = useState(false);
   const [customChoreName, setCustomChoreName] = useState("");
 
+  // Sync global members → local copy
+  useEffect(() => {
+    setLocalMembers(globalMembers);
+    setSelectedMemberId((prev) => {
+      if (!prev && globalMembers.length > 0) return globalMembers[0].id;
+      if (prev && !globalMembers.some((m) => m.id === prev)) return globalMembers[0]?.id || null;
+      return prev;
+    });
+  }, [globalMembers]);
+
+  // Chore logs still use their own subscription (tab-local data)
   useEffect(() => {
     if (!auth.currentUser) return;
-
-    const unsubMembers = base44.entities.FamilyMember.subscribe((m) => {
-      const order = ["Maya", "Luna", "Gabriela", "Francisco"];
-      const sorted = [...m].sort((a, b) => {
-        const indexA = order.indexOf(a.name);
-        const indexB = order.indexOf(b.name);
-        return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
-      });
-      setLocalMembers(sorted);
-      
-      // Initialize or validate selected ID
-      setSelectedMemberId(prevId => {
-        if (!prevId && sorted.length > 0) return sorted[0].id;
-        // If the member no longer exists in the new list, fall back to the first one
-        if (prevId && !sorted.some(sm => sm.id === prevId)) return sorted[0]?.id || null;
-        return prevId;
-      });
-    });
-
-    const unsubSettings = base44.entities.Settings.subscribeOne("family", (s) => {
-      if (s && s.chores) setChores(s.chores);
-    });
-
-    const unsubLogs = base44.entities.Chore.subscribe((logs) => {
+    const unsub = base44.entities.Chore.subscribe((logs) => {
       setChoreLogs(logs);
     }, "-completed_at", 10);
-
-    return () => {
-      unsubMembers();
-      unsubSettings();
-      unsubLogs();
-    };
+    return () => unsub();
   }, []);
 
-  const addPoint = async (task: string) => {
+  const chores = useMemo(() => settings?.chores ?? [], [settings]);
+
+  const selectedMember = useMemo(
+    () => localMembers.find((m) => m.id === selectedMemberId) ?? null,
+    [localMembers, selectedMemberId],
+  );
+
+  const selectedMemberChores = useMemo(() => {
+    if (!selectedMember) return [];
+    return selectedMember.chores || (selectedMember.name === "Maya" ? MAYA_DEFAULT_CHORES : selectedMember.name === "Luna" ? LUNA_DEFAULT_CHORES : []);
+  }, [selectedMember]);
+
+  const selectedMemberIndex = useMemo(
+    () => localMembers.findIndex((m) => m.id === selectedMember?.id),
+    [localMembers, selectedMember],
+  );
+
+  const selectedMemberColor = useMemo(
+    () => (selectedMember ? getMemberColor(selectedMember, selectedMemberIndex) : "#ccc"),
+    [selectedMember, selectedMemberIndex],
+  );
+
+  const addPoint = useCallback(async (task: string) => {
     if (!selectedMemberId || adding) return;
-    const currentMember = localMembers.find(m => m.id === selectedMemberId);
+    const currentMember = localMembers.find((m) => m.id === selectedMemberId);
     if (!currentMember) return;
-    
+
     setAdding(true);
 
-    // Optimistic UI
     const newPoints = (currentMember.points || 0) + 1;
     const newLifetimePoints = (currentMember.lifetime_points || 0) + 1;
-    
+
     const updatedMember = { ...currentMember, points: newPoints, lifetime_points: newLifetimePoints };
-    setLocalMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-    
-    const tempLog = { id: 'temp-' + Date.now(), assignee: updatedMember.id, title: task, points: 1, is_completed: true, completed_at: new Date().toISOString() };
-    setChoreLogs(prev => [tempLog, ...prev].slice(0, 10));
-    
+    setLocalMembers((prev) => prev.map((m) => (m.id === updatedMember.id ? updatedMember : m)));
+
+    const tempLog = { id: "temp-" + Date.now(), assignee: updatedMember.id, title: task, points: 1, is_completed: true, completed_at: new Date().toISOString() };
+    setChoreLogs((prev) => [tempLog, ...prev].slice(0, 10));
+
     setShowConfetti(true);
 
     try {
@@ -83,20 +94,20 @@ export function ChoresTab() {
           const goals = await base44.entities.FamilyGoal.filter({ is_active: true });
           if (goals.length > 0) {
             await base44.entities.FamilyGoal.update(goals[0].id, { current_points: (goals[0].current_points || 0) + 1 });
-            window.dispatchEvent(new Event('casita_refresh_goal'));
+            window.dispatchEvent(new Event("casita_refresh_goal"));
           }
-        })()
+        })(),
       ]);
     } catch (e) {
       console.error(e);
     } finally {
       setAdding(false);
     }
-  };
+  }, [selectedMemberId, adding, localMembers]);
 
-  const subtractPoint = async () => {
+  const subtractPoint = useCallback(async () => {
     if (!selectedMemberId || adding) return;
-    const currentMember = localMembers.find(m => m.id === selectedMemberId);
+    const currentMember = localMembers.find((m) => m.id === selectedMemberId);
     if (!currentMember) return;
 
     setAdding(true);
@@ -104,84 +115,73 @@ export function ChoresTab() {
     const newPoints = Math.max(0, (currentMember.points || 0) - 1);
 
     const updatedMember = { ...currentMember, points: newPoints };
-    setLocalMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+    setLocalMembers((prev) => prev.map((m) => (m.id === updatedMember.id ? updatedMember : m)));
 
-    const tempLog = { id: 'temp-' + Date.now(), assignee: updatedMember.id, title: '😈 Naughty', points: -1, is_completed: true, completed_at: new Date().toISOString() };
-    setChoreLogs(prev => [tempLog, ...prev].slice(0, 10));
+    const tempLog = { id: "temp-" + Date.now(), assignee: updatedMember.id, title: "😈 Naughty", points: -1, is_completed: true, completed_at: new Date().toISOString() };
+    setChoreLogs((prev) => [tempLog, ...prev].slice(0, 10));
 
     try {
       await Promise.all([
         base44.entities.FamilyMember.update(updatedMember.id, { points: newPoints }),
-        base44.entities.Chore.create({ assignee: updatedMember.id, title: '😈 Naughty', points: -1, is_completed: true, completed_at: new Date().toISOString() }),
+        base44.entities.Chore.create({ assignee: updatedMember.id, title: "😈 Naughty", points: -1, is_completed: true, completed_at: new Date().toISOString() }),
         (async () => {
           const goals = await base44.entities.FamilyGoal.filter({ is_active: true });
           if (goals.length > 0) {
             const goalPoints = Math.max(0, (goals[0].current_points || 0) - 1);
             await base44.entities.FamilyGoal.update(goals[0].id, { current_points: goalPoints });
-            window.dispatchEvent(new Event('casita_refresh_goal'));
+            window.dispatchEvent(new Event("casita_refresh_goal"));
           }
-        })()
+        })(),
       ]);
     } catch (e) {
       console.error(e);
     } finally {
       setAdding(false);
     }
-  };
+  }, [selectedMemberId, adding, localMembers]);
 
-  const handleCustomChoreSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (customChoreName.trim()) {
-      addPoint(customChoreName.trim());
-      setCustomChoreName("");
-      setIsCustomInputOpen(false);
-    }
-  };
-
-  const neonColors = ["#ff00ff", "#00f2fe", "#00ff00", "#a855f7", "#ff6b00", "#ffff00"];
-
-  const getMemberColor = (member: any, index: number) => {
-    return member.color || neonColors[index % neonColors.length];
-  };
-
-  const selectedMember = localMembers.find(m => m.id === selectedMemberId);
+  const handleCustomChoreSubmit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      if (customChoreName.trim()) {
+        addPoint(customChoreName.trim());
+        setCustomChoreName("");
+        setIsCustomInputOpen(false);
+      }
+    },
+    [customChoreName, addPoint],
+  );
 
   return (
     <div className="p-4 space-y-6 pb-24">
       <ConfettiOverlay show={showConfetti} onComplete={() => setShowConfetti(false)} />
-      
+
       <div>
         <h1 className="text-2xl font-black text-gray-900 mb-4">Who did a chore?</h1>
         <div className="flex space-x-3 overflow-x-auto pt-2 pb-2 scrollbar-hide">
           {localMembers.map((member, index) => {
             const isSelected = selectedMemberId === member.id;
             const memberColor = getMemberColor(member, index);
-            
+
             return (
               <button
                 key={member.id}
                 onClick={() => setSelectedMemberId(member.id)}
                 className={cn(
                   "flex flex-col items-center p-3 rounded-2xl min-w-[80px] transition-all border",
-                  isSelected 
-                    ? "text-white shadow-lg scale-105" 
-                    : "bg-white text-gray-600 border-gray-100 hover:border-gray-200"
+                  isSelected ? "text-white shadow-lg scale-105" : "bg-white text-gray-600 border-gray-100 hover:border-gray-200",
                 )}
-                style={{ 
+                style={{
                   backgroundColor: isSelected ? memberColor : undefined,
                   borderColor: isSelected ? memberColor : undefined,
-                  boxShadow: isSelected ? `0 10px 20px -5px ${memberColor}40` : undefined
+                  boxShadow: isSelected ? `0 10px 20px -5px ${memberColor}40` : undefined,
                 }}
               >
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-2 bg-white/20 overflow-hidden" 
-                  style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : memberColor }}
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-2 bg-white/20 overflow-hidden"
+                  style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.2)" : memberColor }}
                 >
-                  {member.avatar_url ? (
-                    <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
-                  ) : (
-                    member.name.charAt(0)
-                  )}
+                  {member.avatar_url ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" /> : member.name.charAt(0)}
                 </div>
                 <span className="text-xs font-black uppercase tracking-wider">{member.name}</span>
                 <span className="text-[10px] font-bold opacity-80">{member.points} pts</span>
@@ -195,45 +195,38 @@ export function ChoresTab() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Select Chore</h2>
           <div className="grid grid-cols-2 gap-3">
-            {(selectedMember.chores || (selectedMember.name === 'Maya' ? MAYA_DEFAULT_CHORES : selectedMember.name === 'Luna' ? LUNA_DEFAULT_CHORES : [])).map((chore: string) => {
-              const memberIndex = localMembers.findIndex(m => m.id === selectedMember.id);
-              const memberColor = getMemberColor(selectedMember, memberIndex);
-              
-              return (
-                <button
-                  key={chore}
-                  onClick={() => addPoint(chore)}
-                  disabled={adding}
-                  className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm transition-all active:scale-95 disabled:opacity-50 group"
-                  style={{ 
-                    borderColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = `${memberColor}40`;
-                    e.currentTarget.style.boxShadow = `0 4px 12px ${memberColor}10`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.boxShadow = 'none';
+            {selectedMemberChores.map((chore: string) => (
+              <button
+                key={chore}
+                onClick={() => addPoint(chore)}
+                disabled={adding}
+                className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm transition-all active:scale-95 disabled:opacity-50 group"
+                style={{ borderColor: "transparent" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = `${selectedMemberColor}40`;
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${selectedMemberColor}10`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "transparent";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <span className="font-bold text-gray-800 text-sm">{chore}</span>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-2 transition-colors"
+                  style={{
+                    backgroundColor: `${selectedMemberColor}15`,
+                    color: selectedMemberColor,
                   }}
                 >
-                  <span className="font-bold text-gray-800 text-sm">{chore}</span>
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ml-2 transition-colors"
-                    style={{ 
-                      backgroundColor: `${memberColor}15`,
-                      color: memberColor
-                    }}
-                  >
-                    <Plus className="w-5 h-5" />
-                  </div>
-                </button>
-              );
-            })}
-            
+                  <Plus className="w-5 h-5" />
+                </div>
+              </button>
+            ))}
+
             {/* Custom Chore Button or Input */}
             {isCustomInputOpen ? (
-              <form 
+              <form
                 onSubmit={handleCustomChoreSubmit}
                 className="col-span-2 flex items-center space-x-2 p-3 bg-white border-2 border-primary/20 rounded-2xl shadow-md animate-in zoom-in-95 duration-200"
               >
@@ -245,14 +238,10 @@ export function ChoresTab() {
                   onChange={(e) => setCustomChoreName(e.target.value)}
                   className="flex-1 bg-transparent border-none focus:ring-0 font-bold text-gray-800 placeholder:text-gray-300"
                 />
-                <button 
-                  type="button"
-                  onClick={() => setIsCustomInputOpen(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 font-bold text-sm"
-                >
+                <button type="button" onClick={() => setIsCustomInputOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 font-bold text-sm">
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={!customChoreName.trim() || adding}
                   className="p-3 bg-[#ff00ff] text-white rounded-2xl shadow-[0_0_15px_rgba(255,0,255,0.4)] disabled:opacity-50 transition-all active:scale-90"
@@ -275,7 +264,7 @@ export function ChoresTab() {
           </div>
 
           {/* Naughty button — only for children */}
-          {selectedMember.role === 'child' && (
+          {selectedMember.role === "child" && (
             <div className="mt-4">
               <button
                 onClick={subtractPoint}
@@ -297,19 +286,16 @@ export function ChoresTab() {
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Recent Chores</h2>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             {choreLogs.map((log, i) => {
-              const member = localMembers.find(m => m.id === log.assignee);
+              const member = localMembers.find((m) => m.id === log.assignee);
+              const memberIdx = member ? localMembers.indexOf(member) : 0;
               return (
-                <div key={log.id} className={`p-3 flex items-center justify-between ${i !== choreLogs.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                <div key={log.id} className={`p-3 flex items-center justify-between ${i !== choreLogs.length - 1 ? "border-b border-gray-50" : ""}`}>
                   <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold overflow-hidden shrink-0 shadow-sm" 
-                      style={{ backgroundColor: member ? getMemberColor(member, localMembers.indexOf(member)) : '#ccc' }}
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold overflow-hidden shrink-0 shadow-sm"
+                      style={{ backgroundColor: member ? getMemberColor(member, memberIdx) : "#ccc" }}
                     >
-                      {member?.avatar_url ? (
-                        <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
-                      ) : (
-                        member?.name?.charAt(0) || '?'
-                      )}
+                      {member?.avatar_url ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" /> : member?.name?.charAt(0) || "?"}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-800">{log.title}</p>
@@ -320,7 +306,7 @@ export function ChoresTab() {
                       </div>
                     </div>
                   </div>
-                  <span className={`text-sm font-black ${log.points < 0 ? 'text-red-500' : 'text-green-500'}`}>{log.points < 0 ? log.points : `+${log.points}`}</span>
+                  <span className={`text-sm font-black ${log.points < 0 ? "text-red-500" : "text-green-500"}`}>{log.points < 0 ? log.points : `+${log.points}`}</span>
                 </div>
               );
             })}

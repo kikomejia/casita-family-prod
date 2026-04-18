@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { UIProvider } from "@/context/UIContext";
+import { DataProvider } from "@/context/DataContext";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -40,7 +41,9 @@ export default function RootLayout({
       <body className="antialiased font-sans bg-slate-50 text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
         <UIProvider>
           <AuthProvider>
-            {children}
+            <DataProvider>
+              {children}
+            </DataProvider>
           </AuthProvider>
         </UIProvider>
       </body>
