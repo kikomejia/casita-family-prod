@@ -1,6 +1,6 @@
 "use client";
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -50,4 +50,4 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   }
 }
 
-export { signInWithPopup, onAuthStateChanged };
+export { signInWithPopup, signInAnonymously, onAuthStateChanged };

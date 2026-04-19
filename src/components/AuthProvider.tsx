@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
-import { auth, signInWithPopup, googleProvider, onAuthStateChanged } from "@/lib/firebase";
+import { auth, signInWithPopup, signInAnonymously, googleProvider, onAuthStateChanged } from "@/lib/firebase";
 import { seedData } from "@/lib/base44Client";
 
 const AuthContext = createContext<{ user: any; loading: boolean; handleLogin: () => void }>({
@@ -67,6 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           >
             <span>Sign in with Google</span>
           </button>
+          {process.env.NODE_ENV === "development" && (
+            <button
+              onClick={() => signInAnonymously(auth)}
+              className="w-full py-3 px-6 bg-gray-100 text-gray-500 font-semibold rounded-xl hover:bg-gray-200 transition-all text-sm mt-2"
+            >
+              Skip sign-in (dev only)
+            </button>
+          )}
         </div>
       </div>
     );
